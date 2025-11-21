@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "816717361610",
+    "project_id": "airquality-tubes",
+    "storage_bucket": "airquality-tubes.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:816717361610:android:c61769d49b17dce3f69f33",
+        "android_client_info": {
+          "package_name": "com.example.iot_air_quality_monitoring"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKkd_cJv1_D8PKshOY_d04F8YltQz7VJ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:816717361610:android:d89169ff8aee4fb4f69f33",
+        "android_client_info": {
+          "package_name": "com.tubes.airquality.iot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKkd_cJv1_D8PKshOY_d04F8YltQz7VJ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
