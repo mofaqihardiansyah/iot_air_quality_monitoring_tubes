@@ -56,6 +56,8 @@ class DefaultFirebaseOptions {
     projectId: 'airquality-tubes',
     authDomain: 'airquality-tubes.firebaseapp.com',
     storageBucket: 'airquality-tubes.firebasestorage.app',
+    databaseURL:
+        'https://airquality-tubes-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
