@@ -60,11 +60,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text(
                     'Error: ${snapshot.error}',
@@ -86,11 +82,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.history, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     'No historical data available',
@@ -123,7 +115,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 final history = historyList[index];
                 final aqiStatus = AQIUtils.getAQIStatus(history.toSensorData());
                 final statusColor = AQIUtils.getStatusColor(aqiStatus);
-                
+
                 return Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(
@@ -143,8 +135,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           children: [
                             Icon(
                               aqiStatus == AQIStatus.warning
-                                ? Icons.warning_amber_rounded
-                                : Icons.check_circle_rounded,
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.check_circle_rounded,
                               color: statusColor,
                               size: 20,
                             ),
@@ -152,7 +144,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Expanded(
                               child: Text(
                                 DateFormat('MMM dd, yyyy - HH:mm').format(
-                                  DateTime.fromMillisecondsSinceEpoch(history.timestamp * 1000),
+                                  DateTime.fromMillisecondsSinceEpoch(
+                                    history.timestamp * 1000,
+                                  ),
                                 ),
                                 style: const TextStyle(
                                   fontSize: 16,
@@ -193,7 +187,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             _buildHistoryItem(
                               'Dust',
                               '${history.dustDensity.toStringAsFixed(2)} mg/m³',
-                              history.dustDensity > 75 ? Colors.red : Colors.brown,
+                              history.dustDensity > 75
+                                  ? Colors.red
+                                  : Colors.brown,
                             ),
                           ],
                         ),
@@ -232,9 +228,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

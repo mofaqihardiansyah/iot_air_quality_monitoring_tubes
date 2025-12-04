@@ -1,56 +1,75 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
+import 'dart:developer' as dev;
 import '../models/historical_data.dart';
 
 class HistoricalDataService {
-  final DatabaseReference _historyRef = FirebaseDatabase.instance.ref().child('history');
+  DatabaseReference get _historyRef => FirebaseDatabase.instance.ref().child('history');
 
   // Get historical data as a stream
   Stream<List<HistoricalData>> getHistoryStream() {
     return _historyRef.orderByKey().limitToLast(50).onValue.map((event) {
       final snapshot = event.snapshot;
       if (snapshot.value != null) {
+        try {
+          final data = snapshot.value as Map<dynamic, dynamic>;
+          final List<HistoricalData> historyList = [];
+
+          data.forEach((key, value) {
+            if (value != null) {
+              historyList.add(HistoricalData.fromMap(key.toString(), value));
+            }
+          });
+
+          // Sort by timestamp in descending order (newest first)
+          historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return historyList;
+        } catch (e) {
+          dev.log('Error parsing historical data: $e', name: 'HistoricalDataService');
+          return <HistoricalData>[];
+        }
+      } else {
+        return <HistoricalData>[];
+      }
+    }).handleError((error) {
+      dev.log('Error in history stream: $error', name: 'HistoricalDataService');
+      return <HistoricalData>[];
+    }) as Stream<List<HistoricalData>>;
+  }
+
+  // Get a single snapshot of historical data
+  Future<List<HistoricalData>> getHistoryData() async {
+    try {
+      final snapshot = await _historyRef.orderByKey().limitToLast(50).get();
+      final List<HistoricalData> historyList = [];
+
+      if (snapshot.value != null) {
         final data = snapshot.value as Map<dynamic, dynamic>;
-        final List<HistoricalData> historyList = [];
-        
         data.forEach((key, value) {
           if (value != null) {
             historyList.add(HistoricalData.fromMap(key.toString(), value));
           }
         });
-        
+
         // Sort by timestamp in descending order (newest first)
         historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        return historyList;
-      } else {
-        return [];
       }
-    });
-  }
 
-  // Get a single snapshot of historical data
-  Future<List<HistoricalData>> getHistoryData() async {
-    final snapshot = await _historyRef.orderByKey().limitToLast(50).get();
-    final List<HistoricalData> historyList = [];
-    
-    if (snapshot.value != null) {
-      final data = snapshot.value as Map<dynamic, dynamic>;
-      data.forEach((key, value) {
-        if (value != null) {
-          historyList.add(HistoricalData.fromMap(key.toString(), value));
-        }
-      });
-      
-      // Sort by timestamp in descending order (newest first)
-      historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return historyList;
+    } catch (e) {
+      dev.log('Error getting history data: $e', name: 'HistoricalDataService');
+      return <HistoricalData>[];
     }
-    
-    return historyList;
   }
 
   // Add new historical data entry
   Future<void> addHistoricalData(HistoricalData historyData) async {
-    await _historyRef.push().set(historyData.toMap());
+    try {
+      await _historyRef.push().set(historyData.toMap());
+    } catch (e) {
+      dev.log('Error adding historical data: $e', name: 'HistoricalDataService');
+      rethrow;
+    }
   }
 
   // Add batch of historical data
@@ -62,7 +81,12 @@ class HistoricalDataService {
 
   // Clear all historical data (useful for testing)
   Future<void> clearAllHistory() async {
-    await _historyRef.remove();
+    try {
+      await _historyRef.remove();
+    } catch (e) {
+      dev.log('Error clearing history: $e', name: 'HistoricalDataService');
+      rethrow;
+    }
   }
 
   // Get historical data within a specific time range
@@ -75,21 +99,29 @@ class HistoricalDataService {
         .map((event) {
       final snapshot = event.snapshot;
       if (snapshot.value != null) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
-        final List<HistoricalData> historyList = [];
-        
-        data.forEach((key, value) {
-          if (value != null) {
-            historyList.add(HistoricalData.fromMap(key.toString(), value));
-          }
-        });
-        
-        // Sort by timestamp in descending order (newest first)
-        historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        return historyList;
+        try {
+          final data = snapshot.value as Map<dynamic, dynamic>;
+          final List<HistoricalData> historyList = [];
+
+          data.forEach((key, value) {
+            if (value != null) {
+              historyList.add(HistoricalData.fromMap(key.toString(), value));
+            }
+          });
+
+          // Sort by timestamp in descending order (newest first)
+          historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return historyList;
+        } catch (e) {
+          dev.log('Error parsing time range historical data: $e', name: 'HistoricalDataService');
+          return <HistoricalData>[];
+        }
       } else {
-        return [];
+        return <HistoricalData>[];
       }
-    });
+    }).handleError((error) {
+      dev.log('Error in history stream by time range: $error', name: 'HistoricalDataService');
+      return <HistoricalData>[];
+    }) as Stream<List<HistoricalData>>;
   }
 }

@@ -1,18 +1,29 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'dart:developer' as dev;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _usersRef = FirebaseDatabase.instance.ref().child('users');
+  DatabaseReference get _usersRef => FirebaseDatabase.instance.ref().child('users');
 
   // Get current user
   User? getCurrentUser() {
-    return _auth.currentUser;
+    try {
+      return _auth.currentUser;
+    } catch (e) {
+      dev.log('Error getting current user: $e', name: 'AuthService');
+      return null;
+    }
   }
 
   // Check if user is signed in
   bool isUserLoggedIn() {
-    return _auth.currentUser != null;
+    try {
+      return _auth.currentUser != null;
+    } catch (e) {
+      dev.log('Error checking login status: $e', name: 'AuthService');
+      return false;
+    }
   }
 
   // Sign in with email and password
@@ -20,11 +31,14 @@ class AuthService {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      // Update last login time in users node
+      // Update last login time in the background (non-blocking)
       if (_auth.currentUser != null) {
-        await _usersRef.child(_auth.currentUser!.uid).update({
+        _usersRef.child(_auth.currentUser!.uid).update({
           'last_login': ServerValue.timestamp,
           'email': email,
+        }).catchError((error) {
+          // Handle error silently or log for debugging
+          dev.log('Error updating last login: $error', name: 'AuthService');
         });
       }
 
@@ -43,11 +57,14 @@ class AuthService {
       );
 
       if (userCredential.user != null) {
-        // Store user data in Firebase Realtime Database
-        await _usersRef.child(userCredential.user!.uid).set({
+        // Store user data in Firebase Realtime Database (non-blocking)
+        _usersRef.child(userCredential.user!.uid).set({
           'email': email,
           'created_at': ServerValue.timestamp,
           'last_login': ServerValue.timestamp,
+        }).catchError((error) {
+          // Handle error silently or log for debugging
+          dev.log('Error creating user data: $error', name: 'AuthService');
         });
       }
 

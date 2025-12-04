@@ -73,12 +73,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: StreamBuilder<SensorData>(
         stream: _monitoringService.getMonitoringStream(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+          // Add a timeout for the initial loading state
+          if (snapshot.connectionState == ConnectionState.waiting ||
+              (snapshot.connectionState == ConnectionState.active && !snapshot.hasData)) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Loading air quality data...'),
+                ],
+              ),
+            );
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${snapshot.error}', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Refresh the page by rebuilding the widget
+                      setState(() {});
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
           } else if (!snapshot.hasData) {
-            return const Center(child: Text('No data available'));
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.data_usage_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No data available', textAlign: TextAlign.center),
+                ],
+              ),
+            );
           }
 
           final sensorData = snapshot.data!;

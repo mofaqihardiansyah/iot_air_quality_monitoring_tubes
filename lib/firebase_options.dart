@@ -65,6 +65,8 @@ class DefaultFirebaseOptions {
     appId: '1:816717361610:android:d89169ff8aee4fb4f69f33',
     messagingSenderId: '816717361610',
     projectId: 'airquality-tubes',
+    authDomain: 'airquality-tubes.firebaseapp.com',
     storageBucket: 'airquality-tubes.firebasestorage.app',
+    databaseURL: 'https://airquality-tubes-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 }

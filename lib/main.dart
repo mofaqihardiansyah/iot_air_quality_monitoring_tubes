@@ -4,12 +4,20 @@ import 'package:iot_air_quality_monitoring/services/auth_service.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/history_screen.dart';
+import 'screens/settings_screen.dart';
+import 'dart:developer' as dev;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    dev.log('Firebase initialization error: $e', name: 'Main');
+    // Continue anyway to allow the app to start
+  }
+
   runApp(const AirQualityApp());
 }
 
@@ -39,7 +47,9 @@ class AirQualityApp extends StatelessWidget {
           return MaterialPageRoute(builder: (context) => const LoginScreen());
         }
         if (settings.name == '/dashboard') {
-          return MaterialPageRoute(builder: (context) => const DashboardScreen());
+          return MaterialPageRoute(
+            builder: (context) => const DashboardScreen(),
+          );
         }
         // Note: Settings screen is pushed directly from dashboard, not using named routes
         return MaterialPageRoute(builder: (context) => const AuthWrapper());
@@ -68,8 +78,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   void _checkAuthState() async {
     try {
-      // Wait a bit for initialization
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Add a timeout for the auth check
       bool isAuthenticated = _authService.isUserLoggedIn();
       if (mounted) {
         setState(() {
@@ -97,7 +106,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 20),
-              Text('Loading...'),
+              Text('Loading app...'),
             ],
           ),
         ),
