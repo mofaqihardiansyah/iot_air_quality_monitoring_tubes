@@ -17,7 +17,6 @@ class HistoricalData {
     required this.timestamp,
   });
 
-  // Factory constructor to create HistoricalData from Firebase snapshot
   factory HistoricalData.fromMap(String id, Map<dynamic, dynamic> map) {
     final stringMap = <String, dynamic>{};
     map.forEach((key, value) {

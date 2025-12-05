@@ -14,22 +14,25 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final HistoricalDataService _historicalService = HistoricalDataService();
-  final ScrollController _scrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_scrollListener);
-  }
+  // Helper function to group historical data by 30-minute intervals
+  Map<DateTime, List<HistoricalData>> _groupHistoryByInterval(
+      List<HistoricalData> historyList) {
+    final Map<DateTime, List<HistoricalData>> groupedData = {};
 
-  void _scrollListener() {
-    // Implement pagination if needed
-  }
+    for (final history in historyList) {
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(history.timestamp * 1000);
+      final minute = (timestamp.minute / 30).floor() * 30;
+      final intervalStart = DateTime(
+          timestamp.year, timestamp.month, timestamp.day, timestamp.hour, minute);
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+      if (groupedData[intervalStart] == null) {
+        groupedData[intervalStart] = [];
+      }
+      groupedData[intervalStart]!.add(history);
+    }
+
+    return groupedData;
   }
 
   @override
@@ -100,117 +103,81 @@ class _HistoryScreenState extends State<HistoryScreen> {
             );
           }
 
-          final historyList = snapshot.data!;
+          final groupedHistory = _groupHistoryByInterval(snapshot.data!);
+          final sortedKeys = groupedHistory.keys.toList()
+            ..sort((a, b) => b.compareTo(a));
 
           return RefreshIndicator(
             onRefresh: () async {
               setState(() {}); // Refresh the stream
             },
-            child: ListView.separated(
-              controller: _scrollController,
+            child: ListView.builder(
               padding: const EdgeInsets.all(16.0),
-              itemCount: historyList.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemCount: sortedKeys.length,
               itemBuilder: (context, index) {
-                final history = historyList[index];
-                final aqiStatus = AQIUtils.getAQIStatus(history.toSensorData());
+                final intervalStart = sortedKeys[index];
+                final historyInInterval = groupedHistory[intervalStart]!;
+                final intervalEnd = intervalStart.add(const Duration(minutes: 30));
+
+                // Calculate average for the interval to determine overall status
+                final avgCoPpm = historyInInterval.map((h) => h.coPpm).reduce((a, b) => a + b) / historyInInterval.length;
+                final avgDustDensity = historyInInterval.map((h) => h.dustDensity).reduce((a, b) => a + b) / historyInInterval.length;
+                final avgTemp = historyInInterval.map((h) => h.temperature).reduce((a, b) => a + b) / historyInInterval.length;
+                final avgHumidity = historyInInterval.map((h) => h.humidity).reduce((a, b) => a + b) / historyInInterval.length;
+
+                final avgSensorData = HistoricalData(
+                  id: '',
+                  coPpm: avgCoPpm,
+                  dustDensity: avgDustDensity,
+                  temperature: avgTemp,
+                  humidity: avgHumidity,
+                  timestamp: intervalStart.millisecondsSinceEpoch ~/ 1000,
+                );
+
+                final aqiStatus = AQIUtils.getAQIStatus(avgSensorData.toSensorData());
                 final statusColor = AQIUtils.getStatusColor(aqiStatus);
 
                 return Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: statusColor.withOpacity(0.3),
-                      width: 1,
-                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Timestamp header
-                        Row(
-                          children: [
-                            Icon(
-                              aqiStatus == AQIStatus.warning
-                                  ? Icons.warning_amber_rounded
-                                  : Icons.check_circle_rounded,
-                              color: statusColor,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                DateFormat('MMM dd, yyyy - HH:mm').format(
-                                  DateTime.fromMillisecondsSinceEpoch(
-                                    history.timestamp * 1000,
-                                  ),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                AQIUtils.getStatusText(aqiStatus),
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Data grid
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildHistoryItem(
-                              'CO',
-                              '${history.coPpm.toStringAsFixed(2)} PPM',
-                              history.coPpm > 100 ? Colors.red : Colors.blue,
-                            ),
-                            _buildHistoryItem(
-                              'Dust',
-                              '${history.dustDensity.toStringAsFixed(2)} mg/m³',
-                              history.dustDensity > 75
-                                  ? Colors.red
-                                  : Colors.brown,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildHistoryItem(
-                              'Temp',
-                              '${history.temperature.toStringAsFixed(1)} °C',
-                              Colors.orange,
-                            ),
-                            _buildHistoryItem(
-                              'Hum',
-                              '${history.humidity.toStringAsFixed(1)} %',
-                              Colors.cyan,
-                            ),
-                          ],
-                        ),
-                      ],
+                  child: ExpansionTile(
+                    leading: Icon(
+                      aqiStatus == AQIStatus.warning ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                      color: statusColor,
                     ),
+                    title: Text(
+                      '${DateFormat('MMM dd, HH:mm').format(intervalStart)} - ${DateFormat('HH:mm').format(intervalEnd)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${historyInInterval.length} readings - Overall Status: ${AQIUtils.getStatusText(aqiStatus)}',
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Column(
+                          children: [
+                            _buildHistoryDetailRow('Time', 'CO', 'Dust', 'Temp', 'Hum', isHeader: true),
+                            const Divider(),
+                            ...historyInInterval.map((history) {
+                              final timestamp = DateTime.fromMillisecondsSinceEpoch(history.timestamp * 1000);
+                              return _buildHistoryDetailRow(
+                                DateFormat('HH:mm:ss').format(timestamp),
+                                '${history.coPpm.toStringAsFixed(2)}',
+                                '${history.dustDensity.toStringAsFixed(2)}',
+                                '${history.temperature.toStringAsFixed(1)}°C',
+                                '${history.humidity.toStringAsFixed(1)}%',
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -221,35 +188,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildHistoryItem(String label, String value, Color color) {
-    return Container(
-      width: 130,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHistoryDetailRow(
+      String time, String co, String dust, String temp, String hum,
+      {bool isHeader = false}) {
+    final style = TextStyle(
+      fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+      fontSize: 12,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Expanded(flex: 2, child: Text(time, style: style)),
+          Expanded(flex: 2, child: Text(co, style: style, textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(dust, style: style, textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(temp, style: style, textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(hum, style: style, textAlign: TextAlign.center)),
         ],
       ),
     );

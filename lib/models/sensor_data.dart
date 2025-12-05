@@ -3,7 +3,8 @@ class SensorData {
   final double dustDensity; // Dust density in mg/m³
   final double temperature; // Temperature in Celsius
   final double humidity; // Humidity in percentage
-  final int? timestamp; // Timestamp in seconds (optional for backward compatibility)
+  final int?
+  timestamp; // Timestamp in seconds (optional for backward compatibility)
 
   SensorData({
     required this.coPpm,
@@ -13,7 +14,6 @@ class SensorData {
     this.timestamp,
   });
 
-  // Factory constructor to create SensorData from Firebase snapshot
   factory SensorData.fromMap(Map<String, dynamic> map) {
     return SensorData(
       coPpm: (map['co_ppm'] ?? 0.0).toDouble(),
@@ -24,7 +24,6 @@ class SensorData {
     );
   }
 
-  // Method to convert SensorData to Map for Firebase storage
   Map<String, dynamic> toMap() {
     return {
       'co_ppm': coPpm,

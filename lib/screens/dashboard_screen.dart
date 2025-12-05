@@ -4,6 +4,7 @@ import 'package:iot_air_quality_monitoring/services/auth_service.dart';
 import 'package:iot_air_quality_monitoring/services/monitoring_service.dart';
 import 'package:iot_air_quality_monitoring/utils/aqi_utils.dart';
 import 'package:iot_air_quality_monitoring/models/sensor_data.dart';
+import 'package:iot_air_quality_monitoring/widgets/realtime_chart.dart'; // Pastikan file ini ada
 import 'history_screen.dart';
 import 'settings_screen.dart';
 
@@ -17,6 +18,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final MonitoringService _monitoringService = MonitoringService();
   final AuthService _authService = AuthService();
+
+  // List lokal untuk menampung riwayat data sementara agar grafik bergerak
+  final List<SensorData> _graphData = [];
 
   @override
   Widget build(BuildContext context) {
@@ -56,12 +60,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (value == 'history') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const HistoryScreen(),
+                  ),
                 );
               } else if (value == 'settings') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               } else if (value == 'logout') {
                 _handleLogout();
@@ -73,9 +81,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: StreamBuilder<SensorData>(
         stream: _monitoringService.getMonitoringStream(),
         builder: (context, snapshot) {
-          // Add a timeout for the initial loading state
+          // --- LOGIKA MENYIMPAN DATA KE LIST GRAFIK ---
+          if (snapshot.hasData) {
+            final newData = snapshot.data!;
+
+            // Cek apakah data baru memiliki timestamp berbeda agar tidak duplikat
+            // Jika list kosong, langsung masukkan.
+            bool shouldAdd = false;
+            if (_graphData.isEmpty) {
+              shouldAdd = true;
+            } else if (newData.timestamp != null &&
+                _graphData.last.timestamp != newData.timestamp) {
+              shouldAdd = true;
+            }
+
+            if (shouldAdd) {
+              // Tambahkan ke list
+              // Kita gunakan addPostFrameCallback agar tidak error "setState during build"
+              // atau karena ini variabel lokal state biasa (bukan widget state terpisah),
+              // modifikasi list langsung aman, tapi UI update ikut stream builder.
+              _graphData.add(newData);
+
+              // Batasi jumlah titik data (misal: 20 titik terakhir) agar memori hemat
+              if (_graphData.length > 20) {
+                _graphData.removeAt(0);
+              }
+            }
+          }
+          // ---------------------------------------------
+
+          // Handling Loading & Error
           if (snapshot.connectionState == ConnectionState.waiting ||
-              (snapshot.connectionState == ConnectionState.active && !snapshot.hasData)) {
+              (snapshot.connectionState == ConnectionState.active &&
+                  !snapshot.hasData)) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -91,13 +129,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}', textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      // Refresh the page by rebuilding the widget
                       setState(() {});
                     },
                     child: const Text('Retry'),
@@ -124,91 +161,198 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final statusText = AQIUtils.getStatusText(aqiStatus);
           final healthMessage = AQIUtils.getHealthMessage(aqiStatus);
 
-          String lastUpdatedText = '';
-          if (sensorData.timestamp != null && sensorData.timestamp! > 0) {
-            final dateTime = DateTime.fromMillisecondsSinceEpoch(sensorData.timestamp! * 1000);
-            lastUpdatedText = 'Last updated: ${DateFormat('MMM dd, yyyy - HH:mm:ss').format(dateTime)}';
-          } else {
-            lastUpdatedText = 'Last updated: --:--:--';
-          }
+          // Widget untuk menampilkan waktu pembaruan terakhir dengan gaya yang lebih baik
+          Widget buildLastUpdated(SensorData sensorData) {
+            String lastUpdatedText;
+            if (sensorData.timestamp != null && sensorData.timestamp! > 0) {
+              final dateTime = DateTime.fromMillisecondsSinceEpoch(
+                sensorData.timestamp! * 1000,
+              );
+              lastUpdatedText =
+                  'Last updated: ${DateFormat('MMM dd, yyyy - HH:mm:ss').format(dateTime)}';
+            } else {
+              lastUpdatedText = 'Last updated: --:--:--';
+            }
 
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: statusColor.withValues(alpha: 0.3),
-                      width: 1,
+            return Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.update, color: Colors.grey.shade700, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    lastUpdatedText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          aqiStatus == AQIStatus.warning
-                            ? Icons.warning_amber_rounded
-                            : Icons.check_circle_rounded,
-                          color: statusColor,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      healthMessage,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: statusColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      lastUpdatedText,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-              Expanded(
-                child: Padding(
+            );
+          }
+
+          // Gunakan SingleChildScrollView agar bisa scroll ke bawah melihat grafik
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // 1. Header Status AQI
+                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(16.0),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 20.0,
-                    mainAxisSpacing: 20.0,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: statusColor.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Column(
                     children: [
-                      _buildSensorCard('CO (PPM)', sensorData.coPpm.toStringAsFixed(2),
-                          sensorData.coPpm > 100 ? Colors.red : Colors.blue),
-                      _buildSensorCard('Dust (mg/m³)', sensorData.dustDensity.toStringAsFixed(2),
-                          sensorData.dustDensity > 75 ? Colors.red : Colors.brown),
-                      _buildSensorCard('Temperature (°C)', sensorData.temperature.toStringAsFixed(1), Colors.orange),
-                      _buildSensorCard('Humidity (%)', sensorData.humidity.toStringAsFixed(1), Colors.cyan),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            aqiStatus == AQIStatus.warning
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded,
+                            color: statusColor,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            statusText,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        healthMessage,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      // Menggunakan widget yang sudah dibuat
+                      buildLastUpdated(sensorData),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // 2. Grid Kartu Sensor
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16.0,
+                    mainAxisSpacing: 16.0,
+                    shrinkWrap:
+                        true, // Penting agar tidak crash di dalam SingleChildScrollView
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Scroll mengikuti parent
+                    children: [
+                      _buildSensorCard(
+                        'CO (PPM)',
+                        sensorData.coPpm.toStringAsFixed(2),
+                        sensorData.coPpm > 100 ? Colors.red : Colors.blue,
+                      ),
+                      _buildSensorCard(
+                        'Dust (mg/m³)',
+                        sensorData.dustDensity.toStringAsFixed(2),
+                        sensorData.dustDensity > 75 ? Colors.red : Colors.brown,
+                      ),
+                      _buildSensorCard(
+                        'Temperature (°C)',
+                        sensorData.temperature.toStringAsFixed(1),
+                        Colors.orange,
+                      ),
+                      _buildSensorCard(
+                        'Humidity (%)',
+                        sensorData.humidity.toStringAsFixed(1),
+                        Colors.cyan,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. Bagian Grafik Real-time
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        "Real-time Trends",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (_graphData.isNotEmpty)
+                        RealTimeChart(
+                          dataPoints: List.from(_graphData),
+                          title: "Temperature (°C)",
+                          lineColor: Colors.orange,
+                          parameter: 'temp',
+                        ),
+                      const SizedBox(height: 16),
+
+                      if (_graphData.isNotEmpty)
+                        RealTimeChart(
+                          dataPoints: List.from(_graphData),
+                          title: "Humidity (%)",
+                          lineColor: Colors.cyan,
+                          parameter: 'hum',
+                        ),
+                      const SizedBox(height: 16),
+
+                      // Grafik CO
+                      if (_graphData.isNotEmpty)
+                        RealTimeChart(
+                          dataPoints: List.from(
+                            _graphData,
+                          ), // Kirim copy list agar aman
+                          title: "Carbon Monoxide (PPM)",
+                          lineColor: Colors.blue,
+                          parameter: 'co',
+                        ),
+                      const SizedBox(height: 16),
+
+                      // Grafik Debu
+                      if (_graphData.isNotEmpty)
+                        RealTimeChart(
+                          dataPoints: List.from(_graphData),
+                          title: "Dust Density (mg/m³)",
+                          lineColor: Colors.brown,
+                          parameter: 'dust',
+                        ),
+                      const SizedBox(height: 30), // Padding bawah
+                    ],
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -217,13 +361,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSensorCard(String title, String value, Color color) {
     return Card(
-      elevation: 6,
+      elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: color.withValues(alpha: 0.3),
-          width: 2,
-        ),
+        side: BorderSide(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -232,37 +373,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              color.withValues(alpha: 0.1),
-              color.withValues(alpha: 0.3),
+              color.withValues(alpha: 0.05),
+              color.withValues(alpha: 0.2),
             ],
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   value,
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
             ],

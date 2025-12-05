@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  fl_chart : ^1.1.1
 
   # Firebase dependencies
   firebase_core: ^4.2.1
