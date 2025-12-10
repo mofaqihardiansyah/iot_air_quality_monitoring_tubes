@@ -15,16 +15,16 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final HistoricalDataService _historicalService = HistoricalDataService();
 
-  // Helper function to group historical data by 10-second intervals
+  // Helper function to group historical data by 1-hour intervals
   Map<DateTime, List<HistoricalData>> _groupHistoryByInterval(
       List<HistoricalData> historyList) {
     final Map<DateTime, List<HistoricalData>> groupedData = {};
 
     for (final history in historyList) {
       final timestamp = DateTime.fromMillisecondsSinceEpoch(history.timestamp * 1000);
-      final second = (timestamp.second / 10).floor() * 10;
+      // Group by hour - set minutes and seconds to 0
       final intervalStart = DateTime(
-          timestamp.year, timestamp.month, timestamp.day, timestamp.hour, timestamp.minute, second);
+          timestamp.year, timestamp.month, timestamp.day, timestamp.hour, 0, 0);
 
       if (groupedData[intervalStart] == null) {
         groupedData[intervalStart] = [];
@@ -81,22 +81,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
+                  const Icon(Icons.history, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
                     'No historical data available',
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 8),
-                  Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     'Past readings will appear here',
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Debug: HasData=${snapshot.hasData}, Length=${snapshot.data?.length ?? 0}',
+                    style: const TextStyle(fontSize: 12, color: Colors.red),
                   ),
                 ],
               ),
@@ -117,7 +122,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               itemBuilder: (context, index) {
                 final intervalStart = sortedKeys[index];
                 final historyInInterval = groupedHistory[intervalStart]!;
-                final intervalEnd = intervalStart.add(const Duration(seconds: 10));
+                final intervalEnd = intervalStart.add(const Duration(hours: 1));
 
                 // Calculate average for the interval to determine overall status
                 final avgCoPpm = historyInInterval.map((h) => h.coPpm).reduce((a, b) => a + b) / historyInInterval.length;
@@ -148,7 +153,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       color: statusColor,
                     ),
                     title: Text(
-                      '${DateFormat('MMM dd, HH:mm:ss').format(intervalStart)} - ${DateFormat('HH:mm:ss').format(intervalEnd)}',
+                      '${DateFormat('MMM dd, HH:mm').format(intervalStart)} - ${DateFormat('HH:mm').format(intervalEnd)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,

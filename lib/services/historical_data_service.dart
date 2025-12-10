@@ -8,45 +8,57 @@ class HistoricalDataService {
 
   // Get historical data as a stream
   Stream<List<HistoricalData>> getHistoryStream() {
-    return _historyRef.orderByKey().limitToLast(50).onValue.map((event) {
+    // Use onValue without limits first to ensure stream stays alive
+    return _historyRef.onValue.map((event) {
       final snapshot = event.snapshot;
-      dev.log('History snapshot value type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
-      if (snapshot.value != null) {
+      dev.log('📊 History snapshot received - exists: ${snapshot.exists}, value: ${snapshot.value != null}', name: 'HistoricalDataService');
+      
+      if (snapshot.exists && snapshot.value != null) {
         try {
           final List<HistoricalData> historyList = [];
           
           if (snapshot.value is Map) {
             final data = snapshot.value as Map<dynamic, dynamic>;
+            dev.log('✅ Processing Map with ${data.length} keys', name: 'HistoricalDataService');
             data.forEach((key, value) {
               if (value is Map) {
-                historyList.add(HistoricalData.fromMap(key.toString(), value));
+                try {
+                  historyList.add(HistoricalData.fromMap(key.toString(), value));
+                } catch (e) {
+                  dev.log('⚠️ Failed to parse item $key: $e', name: 'HistoricalDataService');
+                }
               }
             });
           } else if (snapshot.value is List) {
             final data = snapshot.value as List<dynamic>;
+            dev.log('✅ Processing List with ${data.length} items', name: 'HistoricalDataService');
             for (var i = 0; i < data.length; i++) {
               if (data[i] is Map) {
-                historyList.add(HistoricalData.fromMap(i.toString(), data[i] as Map<dynamic, dynamic>));
+                try {
+                  historyList.add(HistoricalData.fromMap(i.toString(), data[i] as Map<dynamic, dynamic>));
+                } catch (e) {
+                  dev.log('⚠️ Failed to parse item $i: $e', name: 'HistoricalDataService');
+                }
               }
             }
           } else {
-            dev.log('Unexpected history data type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
+            dev.log('❌ Unexpected data type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
           }
 
-          // Sort by timestamp in descending order (newest first)
+          // Sort and limit
           historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          return historyList;
-        } catch (e) {
-          dev.log('Error parsing historical data: $e', name: 'HistoricalDataService');
+          final limitedList = historyList.take(100).toList();
+          dev.log('✅ Returning ${limitedList.length} history items', name: 'HistoricalDataService');
+          return limitedList;
+        } catch (e, stack) {
+          dev.log('❌ Error parsing: $e\n$stack', name: 'HistoricalDataService');
           return <HistoricalData>[];
         }
       } else {
+        dev.log('⚠️ Snapshot empty or null', name: 'HistoricalDataService');
         return <HistoricalData>[];
       }
-    }).handleError((error) {
-      dev.log('Error in history stream: $error', name: 'HistoricalDataService');
-      return <HistoricalData>[];
-    }) as Stream<List<HistoricalData>>;
+    });
   }
 
   // Get a single snapshot of historical data

@@ -59,8 +59,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         timestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
       await _historicalService.addHistoricalData(historyData);
+      // Debug: Show generic toast/snackbar to confirm save
+      if (mounted) {
+        // Enabled to verify saves are working:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ Saved to history!'), duration: Duration(milliseconds: 800)));
+      }
     } catch (e) {
       debugPrint('Error saving history: $e');
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      }
     }
   }
 
