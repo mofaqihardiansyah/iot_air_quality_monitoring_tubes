@@ -45,11 +45,10 @@ class HistoricalDataService {
             dev.log('❌ Unexpected data type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
           }
 
-          // Sort and limit
+          // Sort by timestamp in descending order (newest first)
           historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          final limitedList = historyList.take(100).toList();
-          dev.log('✅ Returning ${limitedList.length} history items', name: 'HistoricalDataService');
-          return limitedList;
+          dev.log('✅ Returning ${historyList.length} history items (no limit)', name: 'HistoricalDataService');
+          return historyList;
         } catch (e, stack) {
           dev.log('❌ Error parsing: $e\n$stack', name: 'HistoricalDataService');
           return <HistoricalData>[];

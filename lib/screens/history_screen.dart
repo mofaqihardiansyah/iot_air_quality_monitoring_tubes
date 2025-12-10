@@ -46,10 +46,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const DashboardScreen()),
-            );
+            Navigator.pop(context);
           },
         ),
       ),
