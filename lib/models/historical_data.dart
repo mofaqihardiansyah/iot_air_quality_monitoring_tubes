@@ -23,13 +23,25 @@ class HistoricalData {
       stringMap[key.toString()] = value;
     });
 
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    int parseInt(dynamic value) {
+      if (value is num) return value.toInt();
+      if (value is String) return num.tryParse(value)?.toInt() ?? 0;
+      return 0;
+    }
+
     return HistoricalData(
       id: id,
-      coPpm: (stringMap['co_ppm'] ?? 0.0).toDouble(),
-      dustDensity: (stringMap['dust_density'] ?? 0.0).toDouble(),
-      temperature: (stringMap['temperature'] ?? 0.0).toDouble(),
-      humidity: (stringMap['humidity'] ?? 0.0).toDouble(),
-      timestamp: (stringMap['timestamp'] ?? 0).toInt(),
+      coPpm: parseDouble(stringMap['co_ppm']),
+      dustDensity: parseDouble(stringMap['dust_density']),
+      temperature: parseDouble(stringMap['temperature']),
+      humidity: parseDouble(stringMap['humidity']),
+      timestamp: parseInt(stringMap['timestamp']),
     );
   }
 

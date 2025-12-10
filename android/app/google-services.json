@@ -2,14 +2,15 @@
   "project_info": {
     "project_number": "816717361610",
     "project_id": "airquality-tubes",
-    "storage_bucket": "airquality-tubes.firebasestorage.app"
+    "storage_bucket": "airquality-tubes.firebasestorage.app",
+    "firebase_url": "https://airquality-tubes-default-rtdb.asia-southeast1.firebasedatabase.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:816717361610:android:c61769d49b17dce3f69f33",
+        "mobilesdk_app_id": "1:816717361610:android:d89169ff8aee4fb4f69f33",
         "android_client_info": {
-          "package_name": "com.example.iot_air_quality_monitoring"
+          "package_name": "com.tubes.airquality.iot"
         }
       },
       "oauth_client": [],

@@ -15,16 +15,16 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final HistoricalDataService _historicalService = HistoricalDataService();
 
-  // Helper function to group historical data by 30-minute intervals
+  // Helper function to group historical data by 10-second intervals
   Map<DateTime, List<HistoricalData>> _groupHistoryByInterval(
       List<HistoricalData> historyList) {
     final Map<DateTime, List<HistoricalData>> groupedData = {};
 
     for (final history in historyList) {
       final timestamp = DateTime.fromMillisecondsSinceEpoch(history.timestamp * 1000);
-      final minute = (timestamp.minute / 30).floor() * 30;
+      final second = (timestamp.second / 10).floor() * 10;
       final intervalStart = DateTime(
-          timestamp.year, timestamp.month, timestamp.day, timestamp.hour, minute);
+          timestamp.year, timestamp.month, timestamp.day, timestamp.hour, timestamp.minute, second);
 
       if (groupedData[intervalStart] == null) {
         groupedData[intervalStart] = [];
@@ -117,7 +117,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               itemBuilder: (context, index) {
                 final intervalStart = sortedKeys[index];
                 final historyInInterval = groupedHistory[intervalStart]!;
-                final intervalEnd = intervalStart.add(const Duration(minutes: 30));
+                final intervalEnd = intervalStart.add(const Duration(seconds: 10));
 
                 // Calculate average for the interval to determine overall status
                 final avgCoPpm = historyInInterval.map((h) => h.coPpm).reduce((a, b) => a + b) / historyInInterval.length;
@@ -148,7 +148,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       color: statusColor,
                     ),
                     title: Text(
-                      '${DateFormat('MMM dd, HH:mm').format(intervalStart)} - ${DateFormat('HH:mm').format(intervalEnd)}',
+                      '${DateFormat('MMM dd, HH:mm:ss').format(intervalStart)} - ${DateFormat('HH:mm:ss').format(intervalEnd)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,

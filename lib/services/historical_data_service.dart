@@ -10,16 +10,28 @@ class HistoricalDataService {
   Stream<List<HistoricalData>> getHistoryStream() {
     return _historyRef.orderByKey().limitToLast(50).onValue.map((event) {
       final snapshot = event.snapshot;
+      dev.log('History snapshot value type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
       if (snapshot.value != null) {
         try {
-          final data = snapshot.value as Map<dynamic, dynamic>;
           final List<HistoricalData> historyList = [];
-
-          data.forEach((key, value) {
-            if (value != null) {
-              historyList.add(HistoricalData.fromMap(key.toString(), value));
+          
+          if (snapshot.value is Map) {
+            final data = snapshot.value as Map<dynamic, dynamic>;
+            data.forEach((key, value) {
+              if (value is Map) {
+                historyList.add(HistoricalData.fromMap(key.toString(), value));
+              }
+            });
+          } else if (snapshot.value is List) {
+            final data = snapshot.value as List<dynamic>;
+            for (var i = 0; i < data.length; i++) {
+              if (data[i] is Map) {
+                historyList.add(HistoricalData.fromMap(i.toString(), data[i] as Map<dynamic, dynamic>));
+              }
             }
-          });
+          } else {
+            dev.log('Unexpected history data type: ${snapshot.value.runtimeType}', name: 'HistoricalDataService');
+          }
 
           // Sort by timestamp in descending order (newest first)
           historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -44,13 +56,22 @@ class HistoricalDataService {
       final List<HistoricalData> historyList = [];
 
       if (snapshot.value != null) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
-        data.forEach((key, value) {
-          if (value != null) {
-            historyList.add(HistoricalData.fromMap(key.toString(), value));
+        if (snapshot.value is Map) {
+          final data = snapshot.value as Map<dynamic, dynamic>;
+          data.forEach((key, value) {
+            if (value is Map) {
+              historyList.add(HistoricalData.fromMap(key.toString(), value));
+            }
+          });
+        } else if (snapshot.value is List) {
+          final data = snapshot.value as List<dynamic>;
+          for (var i = 0; i < data.length; i++) {
+            if (data[i] is Map) {
+              historyList.add(HistoricalData.fromMap(i.toString(), data[i] as Map<dynamic, dynamic>));
+            }
           }
-        });
-
+        }
+        
         // Sort by timestamp in descending order (newest first)
         historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       }
@@ -100,14 +121,23 @@ class HistoricalDataService {
       final snapshot = event.snapshot;
       if (snapshot.value != null) {
         try {
-          final data = snapshot.value as Map<dynamic, dynamic>;
           final List<HistoricalData> historyList = [];
 
-          data.forEach((key, value) {
-            if (value != null) {
-              historyList.add(HistoricalData.fromMap(key.toString(), value));
+          if (snapshot.value is Map) {
+            final data = snapshot.value as Map<dynamic, dynamic>;
+            data.forEach((key, value) {
+              if (value is Map) {
+                historyList.add(HistoricalData.fromMap(key.toString(), value));
+              }
+            });
+          } else if (snapshot.value is List) {
+            final data = snapshot.value as List<dynamic>;
+            for (var i = 0; i < data.length; i++) {
+              if (data[i] is Map) {
+                historyList.add(HistoricalData.fromMap(i.toString(), data[i] as Map<dynamic, dynamic>));
+              }
             }
-          });
+          }
 
           // Sort by timestamp in descending order (newest first)
           historyList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
