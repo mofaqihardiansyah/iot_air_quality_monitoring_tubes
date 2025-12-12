@@ -268,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            aqiStatus == AQIStatus.warning
+                            (aqiStatus == AQIStatus.hazardous || aqiStatus == AQIStatus.unhealthy)
                                 ? Icons.warning_amber_rounded
                                 : Icons.check_circle_rounded,
                             color: statusColor,
@@ -321,7 +321,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildSensorCard(
                         'Dust (mg/m³)',
                         sensorData.dustDensity.toStringAsFixed(2),
-                        sensorData.dustDensity > 75 ? Colors.red : Colors.brown,
+                        sensorData.dustDensity > 0.08 ? Colors.red : Colors.brown,
                       ),
                       _buildSensorCard(
                         'Temperature (°C)',
